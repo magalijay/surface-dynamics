@@ -814,9 +814,9 @@ def IntervalExchangeTransformation(permutation=None, lengths=None):
     from .labelled import LabelledPermutationIET
     from .template import Permutation as Permutation_class
 
-    if isinstance(permutation, Permutation_class) and permutation._flips is not None:
-        raise TypeError("interval exchange with flips not yet implemented")
-    elif isinstance(permutation, LabelledPermutationIET):
+    #if isinstance(permutation, Permutation_class) and permutation._flips is not None:
+    #    raise TypeError("interval exchange with flips not yet implemented")
+    if isinstance(permutation, LabelledPermutationIET):
         p = permutation
     elif isinstance(permutation, tuple):
         p = Permutation(*permutation)

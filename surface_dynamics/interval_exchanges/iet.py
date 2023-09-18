@@ -291,6 +291,10 @@ class IntervalExchangeTransformation:
             ....:     assert m * S.lengths() == T.lengths()
             ....:     assert m.transpose() * T.translations() == S.translations()
         """
+
+        if self._permutation._flips is not None:
+            raise TypeError("the iet has flip(s), the function flipped_translations must be used instead")
+
         dom_sg = self.domain_singularities()
         im_sg = self.range_singularities()
 
@@ -305,6 +309,34 @@ class IntervalExchangeTransformation:
             translations[j] = im_sg[i1] - dom_sg[i0]
 
         return translations
+    
+    def flipped_translations(self):
+        r"""
+        Return a list [[c_0,...,c_n],[t_0,...,t_n]] such that 
+        the iet on the i-th interval is the function x -> c_i*x + t_i
+        """
+        dom_sg = self.domain_singularities()
+        im_sg = self.range_singularities()
+
+        p = self._permutation._labels
+        top_twin = self._permutation._twin[0]
+        top = p[0]
+        bot = p[1]
+        if self._permutation._flips is None :
+            flips = (len(top))*[1]
+        else :
+            flips = self._permutation._flips[0]
+
+        translation_parts = self.vector_space()()
+        #translations = [(1,0)]*(len(dom_sg)-1)        
+        for i0,j in enumerate(top):
+            i1 = top_twin[i0]
+            translation_parts[j] = im_sg[i1] - dom_sg[i0]
+            #print(f"{i0=},{j=},{translation_parts[j]=}")
+            if flips[i0] == -1:
+                translation_parts[j] =  im_sg[i1] + dom_sg[i0+1]
+        
+        return [flips,translation_parts]
 
     def sah_arnoux_fathi_invariant(self):
         r"""
@@ -938,12 +970,54 @@ class IntervalExchangeTransformation:
             cb da ca
             sage: r2.lengths()
             (1, 2, 3)
+
+        ::
+
+            sage: p = iet.Permutation("a b c","c b a",flips=['a'])
+            sage: t = iet.IET(p, [4,3,5])
+            sage: t2 = t*t
+            sage: t2.permutation()
+            -ac bb bc -ca cb
+            bc -ac cb bb -ca
+            sage: t2.lengths()
+            (4, 2, 1, 4, 1)
+
+        ::
+
+            sage: p = iet.Permutation("a b c d","d c b a",flips=['b','c'])
+            sage: t = iet.IET(p, [1/4,3/20,1/2,1/10])
+            sage: t2 = t*t
+            sage: t2.permutation()
+            -ac ad bc cc cb -ca da
+            ad -ac bc cc cb da -ca
+            sage: t2.lengths()
+            (3/20, 1/10, 3/20, 1/5, 3/20, 3/20, 1/10)
+            sage: t8 = t2*t2*t2*t2
+            sage: t8.is_identity()
+            True
+            sage: t8.permutation()
+            acadacad acacacac adacadac bcbcbcbc cccccccc cbcbcbcb cadacada cacacaca dacadaca
+            acadacad acacacac adacadac bcbcbcbc cccccccc cbcbcbcb cadacada cacacaca dacadaca
+            sage: t8.lengths()
+            (1/10, 1/20, 1/10, 3/20, 1/5, 3/20, 1/10, 1/20, 1/10)
+
+        ::
+
+            sage: p = iet.Permutation("a b c d","d b c a",flips=['b','c'])
+            sage: r = iet.IET(p, [4/10,1/10,3/10,2/10])
+            sage: r2 = r*r
+            sage: r2.permutation()
+            -ac ad -ba cc cb -ca da
+            ad cb -ac cc da -ba -ca
+            sage: r2.lengths()
+            (1/5, 1/5, 1/10, 1/10, 1/10, 1/10, 1/5)
         """
         assert(
             isinstance(other, IntervalExchangeTransformation) and
             self.length() == other.length())
 
-        from .labelled import LabelledPermutationIET
+        from .labelled import LabelledPermutationIET, FlippedLabelledPermutationIET
+        
 
         other_sg = other.range_singularities()[1:]
         self_sg = self.domain_singularities()[1:]
@@ -953,6 +1027,20 @@ class IntervalExchangeTransformation:
 
         interval_other = other._permutation._labels[1]
         interval_self = self._permutation._labels[0]
+
+        if other._permutation._flips is None:
+            flips_other0 = [1]*n_other
+            flips_other1 = [1]*n_other
+        else:
+            flips_other0 = other._permutation._flips[0]
+            flips_other1 = other._permutation._flips[1]
+        if self._permutation._flips is None:
+            flips_self0 = [1]*n_self
+            flips_self1 = [1]*n_self
+        else:
+            flips_self0 = self._permutation._flips[0]
+            flips_self1 = self._permutation._flips[1]
+
 
         d_other = dict([(i, []) for i in interval_other])
         d_self = dict([(i, []) for i in interval_self])
@@ -964,10 +1052,12 @@ class IntervalExchangeTransformation:
         l_lengths = []
         while i_other < n_other and i_self < n_self:
             j_other = interval_other[i_other]
+            flip_other = flips_other1[i_other]
             j_self = interval_self[i_self]
+            flip_self = flips_self0[i_self]
 
-            d_other[j_other].append(j_self)
-            d_self[j_self].append(j_other)
+            d_other[j_other].append((j_self,flip_self))
+            d_self[j_self].append((j_other,flip_other))
 
             if other_sg[i_other] < self_sg[i_self]:
                 l = other_sg[i_other] - x
@@ -992,21 +1082,38 @@ class IntervalExchangeTransformation:
 
         l_lengths = []
         top_interval = []
-        for i in other._permutation._labels[0]:
-            for j in d_other[i]:
+        flips = []
+        for i,i_flip in zip(other._permutation._labels[0],flips_other0):
+            sub_interval = []
+            sub_interval_lengths = []
+            for j,j_flip in d_other[i]:
                 a = alphabet_other.unrank(i)
                 b = alphabet_self.unrank(j)
-                top_interval.append(str(a)+str(b))
-                l_lengths.append(d_lengths[(i,j)])
+                sub_interval.append(str(a)+str(b))
+                sub_interval_lengths.append(d_lengths[(i,j)])
+                if j_flip*i_flip == -1 :   # the new interval of continuity is flipped if and only if exactly one of interval number i from other and number j from self is flip
+                    flips.append(str(a)+str(b))
+            if i_flip == -1 :
+                sub_interval.reverse()
+                sub_interval_lengths.reverse()
+            top_interval += sub_interval
+            l_lengths += sub_interval_lengths
 
         bottom_interval = []
-        for i in self._permutation._labels[1]:
-            for j in d_self[i]:
+        for i,i_flip in zip(self._permutation._labels[1],flips_self1):
+            sub_interval = []
+            for j,j_flip in d_self[i]:
                 a = alphabet_other.unrank(j)
                 b = alphabet_self.unrank(i)
-                bottom_interval.append(str(a)+str(b))
-
-        p = LabelledPermutationIET((top_interval,bottom_interval))
+                sub_interval.append(str(a)+str(b))
+            if i_flip == -1 :
+                sub_interval.reverse()
+            bottom_interval += sub_interval
+        
+        if self._permutation._flips is None and other._permutation._flips is None:
+            p = LabelledPermutationIET((top_interval,bottom_interval))
+        else :
+            p = FlippedLabelledPermutationIET((top_interval,bottom_interval),flips=flips)
         return IntervalExchangeTransformation(p,l_lengths)
 
     def __eq__(self, other):
@@ -1277,7 +1384,12 @@ class IntervalExchangeTransformation:
         i0 = self._permutation[0].index(a)
         i1 = self._permutation[1].index(a)
 
-        return value - dom_sg[i0] + im_sg[i1]
+        res = value - dom_sg[i0] + im_sg[i1]
+        
+        if self._permutation._flips is not None and self._permutation._flips[0][i0] == -1 :
+            res = -value + dom_sg[i0+1] + im_sg[i1]
+
+        return res
 
     def rauzy_move(self, side='right', iterations=1, data=False, error_on_saddles=True):
         r"""
@@ -1837,7 +1949,7 @@ class IntervalExchangeTransformation:
 
         for i in range(len(self._permutation)):
             j = t[0][i]
-            G += line2d([(l[0][i],l[1][j]),(l[0][i+1],l[1][j+1])],**d)
+            G += line2d([(l[0][i],l[1][j]),(l[0][i+1],l[1][j+1])], **d)
 
         return G
 
