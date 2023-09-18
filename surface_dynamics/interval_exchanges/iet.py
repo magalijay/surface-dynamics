@@ -2069,12 +2069,12 @@ class IntervalExchangeTransformation:
             sage: T.plot_towers(iterations=5)   # not tested (problem with matplotlib font cache)
             Graphics object consisting of 65 graphics primitives
         """
-        px,py = map(float, position)
+        px, py = map(float, position)
 
         T,_,towers = self.rauzy_move(iterations=iterations,data=True)
         pi = T.permutation()
         A = pi.alphabet()
-        lengths = map(float, T.lengths())
+        lengths = [float(length) for length in T.lengths()]
 
         if colors is None:
             from sage.plot.colors import rainbow
