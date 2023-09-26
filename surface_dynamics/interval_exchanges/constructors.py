@@ -844,6 +844,106 @@ def IntervalExchangeTransformation(permutation=None, lengths=None):
 
 IET = IntervalExchangeTransformation
 
+def CircleExchangeTransformation(permutation=None, lengths=None, rotation=None):
+    """
+    Constructs a circle exchange transformation.
+
+    A circle exchange transformation (or cet) is a map from a
+    circle to itself. It is defined on the circle except at a finite
+    number of points (the singularities) and is a rotation on each
+    connected component of the complement of the singularities. Moreover it is a
+    bijection on its image (or it is injective).
+
+    A circle exchange transformation is encoded by three data. A permutation
+    (that corresponds to the way we echange the intervals), a vector of
+    positive reals (that corresponds to the lengths of the complement of the
+    singularities) and a real (that corresponds to the rotation between the first singularity of the domain circle and the first singularity of the image circle).
+
+    INPUT:
+
+    - ``permutation`` - a permutation
+
+    - ``lengths`` - a list or a dictionary of lengths
+
+    - ``rotation`` - a real number
+
+    OUTPUT:
+
+    circle exchange transformation -- a map of a circle
+
+    EXAMPLES::
+
+        sage: from surface_dynamics import *
+
+    Two initialization methods, the first using a iet.Permutation::
+
+        sage: p = iet.Permutation('a b c','c b a')
+        sage: t = iet.CircleExchangeTransformation(p, {'a':1,'b':0.4523,'c':2.8}, 0.3)
+
+    The second is more direct::
+
+        sage: t = iet.CircleExchangeTransformation(('a b','b a'),{'a':1,'b':4}, 2)
+
+    It's also possible to initialize the lengths only with a list::
+
+        sage: t = iet.CircleExchangeTransformation(('a b c','c b a'),[0.123,0.4,2], 1)
+
+    The two fundamental operations are Rauzy move and normalization::
+
+        sage: t = iet.CircleExchangeTransformation(('a b c','c b a'),[0.123,0.4,2], 1)
+        sage: s = t.rauzy_move()
+        sage: s_n = s.normalize(t.length())
+        sage: s_n.length() == t.length()
+        True
+
+    A not too simple example of a self similar interval exchange transformation::
+
+        sage: p = iet.Permutation('a b c d','d c b a')
+        sage: d = p.rauzy_diagram()
+        sage: g = d.path(p, 't', 't', 'b', 't', 'b', 'b', 't', 'b')
+        sage: m = g.matrix()
+        sage: v = m.eigenvectors_right()[-1][1][0]
+        sage: t = iet.IntervalExchangeTransformation(p,v)
+        sage: s = t.rauzy_move(iterations=8)
+        sage: s.normalize() == t.normalize()
+        True
+    """
+    from .cet import CircleExchangeTransformation as _CET
+    from .labelled import LabelledPermutationIET
+    from .template import Permutation as Permutation_class
+
+    #if isinstance(permutation, Permutation_class) and permutation._flips is not None:
+    #    raise TypeError("interval exchange with flips not yet implemented")
+    if isinstance(permutation, LabelledPermutationIET):
+        p = permutation
+    elif isinstance(permutation, tuple):
+        p = Permutation(*permutation)
+    else:
+        p = Permutation(permutation)
+
+    if len(lengths) != len(p):
+        raise ValueError("bad number of lengths")
+
+    if isinstance(lengths, dict):
+        it = lengths.values()
+    else:
+        it = iter(lengths)
+    for x in it:
+        try:
+            y = float(x)
+        except ValueError:
+            raise TypeError("unable to convert x (='%s') into a real number" % (str(x)))
+
+        if x < 0:
+            raise ValueError("lengths must be non-negative, got {}".format(y))
+
+    if len(rotation) != 2: #(not isinstance(rotation, list)) 
+        raise ValueError("rotation should give 2 real numbers")  
+
+    return _CET(p, lengths, rotation)
+
+
+CET = CircleExchangeTransformation
 
 def IntervalExchangeTransformationFamily(*args):
     r"""
