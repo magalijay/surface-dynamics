@@ -1,55 +1,37 @@
-r"""
-Circle Exchange Transformations
+# TODO : garder seulement fonctions et tests utiles, enlever import *
 
-A circle exchange transformation is a map defined on a circle (see
-help(iet.CircleExchangeTransformation) for a more complete help.
+r"""
+Multiple Exchange Transformations
+
+A multiple exchange transformation is a map defined on several circles (or intervals). See
+help(iet.MultipleExchangeTransformation) for a more complete help.
 
 AUTHOR:
 
-- Magali Jay (2024-01-29)
+- Magali Jay (2024-02-02)
+
 
 EXAMPLES::
 
-    sage: from surface_dynamics import *
+    sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+    sage: import surface_dynamics.interval_exchanges.met as met
+    
+Initialization of a simple iet with integer lengths. The `_repr_` method is not implemented yet::
 
-Initialization of a simple iet with integer lengths::
+    sage: p = mp.MultiplePermutation([[[3,2,1], [3,1,2]]])
+    sage: T = met.MultipleExchangeTransformation(p, [3,2,1], [[0,0]]) #indirect doctest
+    
+Initialization of a multiple iet with or without flips::
 
-    sage: T = iet.IntervalExchangeTransformation(Permutation([3,2,1]), [3,1,2])
-    sage: T
-    Interval exchange transformation of [0, 6[ with permutation
-    1 2 3
-    3 2 1
+    sage: p = mp.MultiplePermutation([[['a','b','c'],['c', 'e', 'b', 'd']], [['d', 'e'], ['a']]])
+    sage: T = met.MultipleExchangeTransformation(p, [3,5,7,1,2], [[1,2],[1/2,3/2]]) #indirect doctest
 
-Rotation corresponds to iet with two intervals::
+    sage: p = mp.MultiplePermutation([[['a','b','c'],['c', 'e', 'b', 'd']], [['d', 'e'], ['a']]], flips='ed')
+    sage: T = met.MultipleExchangeTransformation(p, [3,5,7,1,2], [[1,2],[1/2,3/2]]) #indirect doctest
 
-    sage: p = iet.Permutation('a b', 'b a')
-    sage: T = iet.IntervalExchangeTransformation(p, [1, (sqrt(5)-1)/2])
-    sage: T.in_which_interval(0)
-    'a'
-    sage: T.in_which_interval(T(0))
-    'a'
-    sage: T.in_which_interval(T(T(0)))
-    'b'
-    sage: T.in_which_interval(T(T(T(0))))
-    'a'
-
-There are two plotting methods for iet::
-
-    sage: p = iet.Permutation('a b c','c b a')
-    sage: T = iet.IntervalExchangeTransformation(p, [1, 2, 3])
-
-.. plot the domain and the range of T::
-
-    sage: T.plot_two_intervals()   # not tested (problem with matplotlib font cache)
-    Graphics object consisting of 12 graphics primitives
-
-.. plot T as a function::
-
-    sage: T.plot_function()  # not tested (problem with matplotlib font cache)
-    Graphics object consisting of 3 graphics primitives
 """
 #*****************************************************************************
-#       Copyright (C) 2019 Vincent Delecroix <20100.delecroix@gmail.com>
+#       Copyright (C) 2024 Magali Jay <magali.jay@ens-paris-saclay.fr>
 #
 #  Distributed under the terms of the GNU General Public License (GPL)
 #  as published by the Free Software Foundation; either version 2 of
@@ -57,6 +39,7 @@ There are two plotting methods for iet::
 #                  https://www.gnu.org/licenses/
 #*****************************************************************************
 
+# question : qu'est ce qui est nécessaire ?
 from __future__ import print_function, absolute_import
 from six.moves import range, map, filter, zip
 
@@ -68,175 +51,213 @@ from .template import side_conversion, interval_conversion
 from .labelled import LabelledPermutationIET
 
 from surface_dynamics import iet
-
+from surface_dynamics.interval_exchanges import multiple_permutation,met
 
 class AbstractExchangeTransformation:
     def my_function(self):
         print(self._permutation)
 
-class CircleExchangeTransformation: #(AbstractExchangeTransformation)
+import surface_dynamics.interval_exchanges.multiple_permutation
+
+class MultipleExchangeTransformation: #(AbstractExchangeTransformation)
     r"""
-    Circle exchange transformation
+    Multiple exchange transformation
 
     INPUT:
 
-    - ``permutation`` - a permutation (LabelledPermutationIET)
+    - ``permutation`` - a list of permutations (that could be converted into a MultiplePermutation)
 
-    - ``lengths`` - the list of lengths
+    - ``lengths`` - the list of each circle's or interval's list of lengths
 
-    - ``rotation`` - the list of the top and bottom base point
+    - ``rotation`` - the list of the list of the top and bottom base points (for interval [0, 0])
 
     EXAMPLES::
 
-        sage: from surface_dynamics import *
+        sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+        sage: import surface_dynamics.interval_exchanges.met as met
+    
+    Direct initialization not implemented yet. Initialization from a MultiplePermutation::
 
-    Direct initialization::
-
-        sage: p = iet.CET(('a b c','c b a'),{'a':1,'b':1,'c':1},[0,1/2])
-        sage: p.permutation()
-        a b c
-        c b a
-        sage: p.lengths()
-        (1, 1, 1)
-        sage: p.rotation()
-        1/2
-
-    Initialization from a iet.Permutation::
-
-        sage: perm = iet.Permutation('a b c','c b a')
+        sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['c', 'b', 'a']]])
         sage: l = vector([0.5, 1, 1.2])
-        sage: t = iet.CET(perm, l, [1/10, 4/10])
+        sage: t = met.MultipleExchangeTransformation(perm, l, [[1/10, 4/10]])
         sage: t.permutation() == perm
         True
         sage: t.lengths() == l
         True
-        sage: t.rotation() == 3/10
-        True
+        sage: t.rotation()
+        [3/10]
 
-    Initialization from a Permutation::
+    Note that the rotation must be a list of simple rotation::
 
-        sage: p = Permutation([3,2,1])
-        sage: iet.CET(p, [1,1,1], [0.2, 0.4])
-        Circle exchange transformation of a circle of perimeter 3 with permutation
-        1 2 3
-        3 2 1
+        sage: t = met.MultipleExchangeTransformation(perm, l, [1/10, 4/10])
+        Traceback (most recent call last):
+        ...
+        ValueError: rotation must be a list of list
         
-    If it is not possible to convert lengths to real values an error is raised::
-
-        sage: iet.CircleExchangeTransformation(('a b','b a'),['e','f'],[0.1,1])
-        Traceback (most recent call last):
-        ...
-        TypeError: unable to convert x (='e') into a real number
-
-    The value for the lengths must be positive::
-
-        sage: iet.CET(('a b','b a'),[-1,-1], [0,2])
-        Traceback (most recent call last):
-        ...
-        ValueError: lengths must be non-negative, got -1.0
+        
+    If it is not possible to convert lengths to real values an error is raised. Error not implemented yet.
+    The value for the lengths must be positive. Error not implemented yet.
     """
     from surface_dynamics import iet
-
-    def __init__(self, permutation=None, lengths=None, rotation=None, base_ring=None):
+    #from surface_dynamics.interval_exchanges import multiple_permutation
+    import surface_dynamics.interval_exchanges.multiple_permutation
+    
+    def __init__(self, multi_perm=None, lengths=None, multi_rotation=None, base_ring=None):
         r"""
         INPUT:
 
-        - ``permutation`` - a permutation (LabelledPermutationIET)
+        - ``permutation`` - a multiple permutation (MultiplePermutation)
 
         - ``lengths`` - the list of lengths
 
-        - ``rotation`` - the list of top and bottom base point
+        - ``rotation`` - the list of top and bottom base points
 
         TESTS::
 
-            sage: from surface_dynamics import *
-
-            sage: p = iet.CircleExchangeTransformation(('a','a'), [1], [0,0])
-
-            sage: p = iet.CET(('a b c','c b a'),{'a':1,'b':2,'c':3},[0,3/2])
-            sage: p.permutation()
-            a b c
-            a c b
-            sage: p._permutation.alphabet() == Alphabet(['a','b','c'])
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
+    
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['c', 'b', 'e']], [['d', 'e'], ['a', 'd']]])
+            sage: l = vector([0.5, 1, 1.2, 4, 0.5])
+            sage: t = met.MultipleExchangeTransformation(perm, l, [[1/10, 4/10], [1/4, 0]])
+            sage: t.permutation() == perm
             True
-            sage: p.lengths()
-            (1, 2, 3)
-            sage: p._rotation
-            [0, 1/2]
-            
+            sage: t.lengths() == l
+            True
 
-            
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['c', 'b', 'e']], [['d', 'e'], ['a', 'd']]], flips=['abcde'])
+            sage: l = vector([0.5, 1, 1.2, 4, 0.5])
+            sage: t = met.MultipleExchangeTransformation(perm, l, [[1/10, 4/10], [1/4, 0]])
+            sage: t.permutation() == perm
+            True
+            sage: t.lengths() == l
+            True
+
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['c', 'b', 'e']], [['d', 'e'], ['a', 'd']]], flips=['abcde'])
+            sage: l = vector([ 1, 2, 3, 4, 1])
+            sage: t = met.MultipleExchangeTransformation(perm, l, [[0, 2], [3, 0]])
+            sage: a = perm.alphabet()
+            sage: t.permutation() ==  mp.MultiplePermutation([[['a', 'b', 'c'], ['e', 'c', 'b']], [['e', 'd'], ['a', 'd']]], flips=['abcde'], alphabet=a)
+            True
+            sage: t.lengths() == l
+            True
         """
         #    sage: p == loads(dumps(p))   # question
         #    True
         
         from sage.modules.free_module_element import free_module_element as vector
-
-        if permutation is None or lengths is None or rotation is None:
+        
+        if multi_perm is None or lengths is None or multi_rotation is None:
             self._permutation = None
             self._lengths = []
             self._rotation = []
             self._base_ring = None
             self._vector_space = None
+        
         else:
-            #self._permutation = copy(permutation) # question : why necessary here ? cf new_perm l. 199 (without, permutation is modified, but where ??)
-            if isinstance(lengths, dict): # question
-                l = [0] * len(permutation)
-                rank = permutation._alphabet.rank
-                for letter, length in lengths.items():
-                    l[rank(letter)] = length
-                lengths = l
-            self._lengths = vector(lengths)
-            if self._lengths is lengths: 
-                # NOTE: vector(.) never performs copy
-                self._lengths = self._lengths.__copy__()
-            l = [0] * (len(permutation)+2)
-            l[:-2] = self._lengths.__copy__()
-            l[-2:] = rotation # note : we must take into account the lengths and the base points
-            l = vector(l)
-            self._base_ring = l.base_ring()
-            M = l.base_ring()**len(permutation)
-            self._vector_space = M.ambient_module()
-            self._init_perm_and_rot(permutation,rotation)
-
-    def _init_perm_and_rot(self,permutation,rotation):
-        flips = permutation.flips() #self._permutation.flips()
-        length = sum(self._lengths)
-        new_perm = [copy(permutation._labels[0]), copy(permutation._labels[1])]  # [self._permutation._labels[0],self._permutation._labels[1]]
-        # ou  [copy(self._permutation._labels[0]),copy(self._permutation._labels[1])] ?
-        new_rotation = copy(rotation)
+            #if isinstance(lengths, dict): # question
+             #   l = [0] * len(permutations)
+              #  rank = permutations._alphabet.rank
+               # for letter, length in lengths.items():
+                #    l[rank(letter)] = length
+                #lengths = l
+            if not isinstance(multi_perm, surface_dynamics.interval_exchanges.multiple_permutation.MultiplePermutation):
+                raise ValueError('permutation must be a MultiplePermutation')
             
-        for level in range(2):
-            while new_rotation[level] < self._base_ring.zero() :
-                new_rotation[level] += length
-            while new_rotation[level] >= length :
-                new_rotation[level] -= length
+            ncomp = multi_perm.number_of_components() # number of components
+            nlab = len(multi_perm) # number of labels
+
+            if len(multi_rotation) > 0 and not isinstance(multi_rotation[0],list):
+                raise ValueError('rotation must be a list of list')
+                
+            if len(multi_rotation) != ncomp:
+                raise ValueError('permutation and rotation do not match')
+                
+            self._lengths = vector(lengths) #[copy(vector(lengths[k])) for k in range(len(lengths))]
+            #if self._lengths is lengths: 
+             #   # NOTE: vector(.) never performs copy
+              #  self._lengths = self._lengths.__copy__()
+            l = [0] * (nlab + 2*ncomp)
+            l[:nlab] = self._lengths.__copy__()
+            l[nlab:nlab+ncomp] = [multi_rotation[k][0] for k in range(ncomp)]
+            l[nlab+ncomp:] = [multi_rotation[k][1] for k in range(ncomp)]
+            # note : we must take into account the lengths and the base points
+            l = vector(l)
+            self._base_ring = l.base_ring() # question : correspond à ce qu'on veut ?
+            M = l.base_ring()**nlab
+            self._vector_space = M.ambient_module() # question : correspond à ce qu'on veut ?
+            comp_lengths = self._check_lengths(multi_perm)
+            self._init_perm_and_rot(multi_perm,multi_rotation,comp_lengths)
+
+    
+    def _check_lengths(self, multi_perm) :
+        shape = multi_perm.shape()
+        ncomp = multi_perm.number_of_components()
+        #top_cut = [sum([shape[i][0] for i in range(k)]) for k in range(ncomp+1)] # successive indices of "changement of component" for top intervals
+        #bot_cut = [sum([shape[i][1] for i in range(k)]) for k in range(ncomp+1)] # successive indices of "changement of component" for bot intervals
+        res = []
+        for k in range(ncomp):
+            top_lab_k = multi_perm._labels[k][0]
+            bot_lab_k = multi_perm._labels[k][1]
+            top_len_comp_k = sum([self._lengths[i] for i in top_lab_k])
+            bot_len_comp_k = sum([self._lengths[i] for i in bot_lab_k])
+            if (bot_len_comp_k != top_len_comp_k) :
+                raise ValueError('Lengths of top and bottom intervals in component %s do not match' % k)
+            res.append(top_len_comp_k)
+        return res
+        #top_comp_length = [sum(self._lengths[top_cut[i]:top_cut[i+1]]) for i in range(ncomp)]
+        #bot_comp_length = [sum(self._lengths[bot_cut[i]:bot_cut[i+1]]) for i in range(ncomp)]
+        #print(top_cut,bot_cut,top_comp_length,bot_comp_length)
+        #k = 0
+        #while k < ncomp :
+        #    if (bot_comp_length[k] != top_comp_length[k]) :
+                #raise ValueError('Lengths of top and bottom intervals in component %s do not match' % k)
+            #k += 1
+
+    # 
+    def _init_perm_and_rot(self,perm,rotation,comp_lengths) :
         # initialize the permutation so that the first top (resp. bottom) label corresponds to the first complete interval after 0 
-            k = -1
-            i = permutation._labels[level][k] # self._permutation._labels[level][k]
-            x = self._lengths[i]
-            c = 0
-            while x <= new_rotation[level] :
-                c += 1
-                k -= 1
-                i = permutation._labels[level][k] # self._permutation._labels[level][k]
-                x += self._lengths[i]
-            if c != 0 :
-                x -= self._lengths[i]
-                new_rotation[level] -= x
-                n = len(permutation) # Attention ne marche peut-être pas tout le temps, en fonction du type de perm ( ?? question)
-                labels_level = []
-                for i in range(n-c,n) :
-                    labels_level.append(permutation._labels[level][i]) # self._permutation._labels[level][i])
-                for i in range(n-c) :
-                    labels_level.append(permutation._labels[level][i]) # self._permutation._labels[level][i])
-                new_perm[level] = labels_level 
-        for level in range(2):
-            for i in range(len(permutation)):
-                new_perm[level][i] = permutation.alphabet().unrank(new_perm[level][i]) # self._permutation.alphabet().unrank(new_perm[level][i]) 
+        #self._permutation = copy(perm)
+        #flips = self._permutation.flips()
+        ncomp = perm.number_of_components()
+        #components_length = [sum(self._lengths[i]) for i in range(len(lengths))]
+        new_perm = [[copy(perm._labels[k][0]), copy(perm._labels[k][1])] for k in range(ncomp)]
+        
+        for k in range(ncomp):
+            for level in range(2):
+                while rotation[k][level] < self._base_ring.zero() :
+                    rotation[k][level] += comp_lengths[k]
+                while rotation[k][level] >= comp_lengths[k] :
+                    rotation[k][level] -= comp_lengths[k]
+                ind = -1
+                i = perm._labels[k][level][ind]
+                x = self._lengths[i]
+                c = 0
+                while x <= rotation[k][level] :
+                    c += 1                
+                    ind -= 1
+                    i = perm._labels[k][level][ind]
+                    x += self._lengths[i]
+                if c != 0 :
+                    x -= self._lengths[i]
+                    rotation[k][level] -= x
+                    n = len(perm._labels[k][level])
+                    labels_level = []
+                    for i in range(n-c,n) :
+                        labels_level.append(perm._labels[k][level][i])
+                    for i in range(n-c) :
+                        labels_level.append(perm._labels[k][level][i])
+                    new_perm[k][level] = labels_level
+                    
+            for level in range(2):
+                for i in range(len(new_perm[k][level])):
+                    new_perm[k][level][i] = perm.alphabet().unrank(new_perm[k][level][i])
+                    #new_perm[k][level][i] = self._permutation.alphabet().unrank(new_perm[level][i])
                     # new_perm contained labels that are number, after the loop it contains labels given by the user
-        self._permutation = iet.Permutation(new_perm[0],new_perm[1],alphabet=permutation.alphabet(),flips=flips)        
-        self._rotation = new_rotation
+
+        self._permutation = multiple_permutation.MultiplePermutation(new_perm,alphabet=perm.alphabet(),flips=perm.flips()) 
+        self._rotation = rotation
 
     
     def vector_space(self):
@@ -245,91 +266,137 @@ class CircleExchangeTransformation: #(AbstractExchangeTransformation)
     
     def base_ring(self):
         r"""
-        Return the base ring over which the discontinuity points are defined
+        Returns the base ring over which the discontinuity points are defined
 
         EXAMPLES::
 
             sage: from surface_dynamics import *
-            sage: p = iet.Permutation('a b', 'b a')
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
+            
+            sage: p = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
 
-            sage: T = iet.CircleExchangeTransformation(p, [3, 12], [1, 2])
+            sage: T = met.MultipleExchangeTransformation(p, [1, 2, 3, 1, 5, 6], [[3, 12], [1, 2]])
             sage: T.base_ring()
             Integer Ring
 
-            sage: T = iet.CircleExchangeTransformation(p, [3, 12], [1, 2/5])
+            sage: T = met.MultipleExchangeTransformation(p, [1, 2, 3, 1, 5, 6], [[3, 12], [1, 2/5]])
             sage: T.base_ring()
             Rational Field
 
-            sage: T = iet.CircleExchangeTransformation(p, [3, 12/5], [0, 2])
+            sage: T = met.MultipleExchangeTransformation(p, [1, 2/7, 3, 1, 5, 6], [[3, 12], [0, 2]])
             sage: T.base_ring()
             Rational Field
 
-            sage: T = iet.CircleExchangeTransformation(p, [3, AA(12).sqrt()], [2, 1])
+            sage: T = met.MultipleExchangeTransformation(p, [1, 2, 3, 1, 5, 6], [[3, AA(12).sqrt()], [2, 1]])
             sage: T.base_ring()
             Algebraic Real Field
 
             sage: sqrt2 = QuadraticField(2).gen()
-            sage: T = iet.CircleExchangeTransformation(p, [1, sqrt2], [1/2, 0])
+            sage: T = met.MultipleExchangeTransformation(p, [1, 2, 3, 1, 5, 6], [[1, sqrt2], [1/2, 0]])
             sage: T.base_ring()
             Number Field in a ...
         """
         return self._base_ring
 
-    #TODO : resoudre le pb du test raté
+    
+    def __copy__(self) :
+        res = self.__class__()
+        res._base_ring = self._base_ring
+        res._vector_space = self._vector_space
+        res._permutation = copy(self._permutation)
+        res._lengths = copy(self._lengths)
+        res._rotation = copy(self._rotation)
+        return res
+
+
     def permutation(self):
         r"""
         Returns the permutation associated to this iet, with the convention that the top and bottom begin with the first complete interval after 0.
 
         OUTPUT:
 
-        permutation -- the permutation associated to this cet
+        permutation -- the permutation associated to this met
 
         EXAMPLES::
 
             sage: from surface_dynamics import *
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
 
-            sage: perm = iet.Permutation('a b c','c b a')
-            sage: p = iet.CircleExchangeTransformation(perm,(1,2,1), [1/4, 1/3])
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            sage: p = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
             sage: p.permutation() == perm
             True
 
-            sage: perm = iet.Permutation('a b c','c b a')
-            sage: p = iet.CircleExchangeTransformation(perm,(1,2,1), [-1/4, 1/3])
+            sage: p = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 4], [0, 4]])
             sage: p.permutation() == perm
             False
-            sage: p.permutation() == iet.Permutation('b c a','c b a') # unsuccessful test, why? 
+            sage: p.permutation() == mp.MultiplePermutation([[['a', 'b', 'c'], ['c', 'd', 'b']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
             True
             sage: p.permutation() # this time the test is successful!
-            b c a
-            c b a
+            [[['a', 'b', 'c'], ['c', 'd', 'b']], [['d', 'e', 'f'], ['a', 'e', 'f']]]
         """
         return copy(self._permutation)
 
+
+    def components_length(self):
+        r"""
+        Returns the list of the total length of each component.
+        
+        OUTPUT:
+
+        list -- the list of the total length of each component.
+        
+        EXAMPLES::
+
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
+
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            
+            sage: t = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
+            sage: t.components_length()
+            [6, 12]
+        """
+        shape = self._permutation.shape()
+        ncomp = self._permutation.number_of_components()
+        res = []
+        for k in range(ncomp):
+            lab_k = self._permutation._labels[k][0]
+            len_comp_k = sum([self._lengths[i] for i in lab_k])
+            res.append(len_comp_k)
+        return res
+    
     def length(self, label=None):
         r"""
-        Return the length of a subinterval, or if ``label`` is None the total length.
+        Returns the length of a subinterval (if ``label`` is specified), or the total length if ``label`` is None.
 
         EXAMPLES::
 
-            sage: from surface_dynamics import *
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
 
-            sage: t = iet.CircleExchangeTransformation(('a b','b a'), [1,3], [1, 2])
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            
+            sage: t = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
             sage: t.length()
-            4
-            sage: t.length('a')
+            18
+            sage: t.length(label='a')
             1
-            sage: t.length('b')
-            3
+            sage: t.length(label='e')
+            5
         """
         if label is None:
             return sum(self._lengths)
-        else:
+        else :
             i = self._permutation._alphabet.rank(label)
-            return self._lengths[i]
-
+            return self._lengths[i]    
+    
+            
     def lengths(self):
         r"""
-        Return the list of lengths associated to this cet.
+        Returns the list of lengths associated to this cet.
 
         OUTPUT:
 
@@ -338,32 +405,102 @@ class CircleExchangeTransformation: #(AbstractExchangeTransformation)
 
         EXAMPLES::
 
-            sage: from surface_dynamics import *
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
 
-            sage: p = iet.CircleExchangeTransformation(('a b','b a'), [1,3], [1/4, 1/6])
-            sage: p.lengths()
-            (1, 3)
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            
+            sage: t = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
+            sage: t.lengths()
+            (1, 2, 3, 1, 5, 6)
         """
         return self._lengths.__copy__()
 
+    
     def rotation(self):
         r"""
         Returns the rotation associated to this iet with the convention that the top and bottom begin with the first complete interval after 0.
 
         OUTPUT:
 
-        rotation -- the rotation angle between the first interval of the image circle and the first interval of the domain circle of this cet
+        list -- the list of rotation angle in each component of this met
+        
+        EXAMPLES::
+
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
+
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            
+            sage: p = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
+            sage: p.rotation()
+            [1/2, 1/12]
+        """
+        return [self._rotation[k][1]-self._rotation[k][0] for k in range(len(self._rotation))]
+
+
+    def domain_singularities(self):
+        r"""
+        Returns the list of singularities of T
+
+        OUTPUT:
+
+        list -- positive reals that corresponds to singularities in the top
+            interval
 
         EXAMPLES::
 
-            sage: from surface_dynamics import *
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
 
-            sage: perm = iet.Permutation('a b c','c b a')
-            sage: p = iet.CircleExchangeTransformation(perm, (1,2,1), [1/2, 1/6])
-            sage: p.rotation()
-            -1/3
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            
+            sage: p = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
+            sage: p.domain_singularities()
+            [[0, 1, 3], [1/4, 5/4, 25/4]]
         """
-        return self._rotation[1]-self._rotation[0]
+        sing = []
+        lengths = self.lengths()
+        for k in range(self._permutation.number_of_components()):
+            l = [self._rotation[k][0]]
+            for j in self._permutation._labels[k][0]:
+                l.append(l[-1] + lengths[j])
+            del(l[-1])
+            sing.append(l)
+        return sing
+
+    def range_singularities(self):
+        r"""
+        Returns the list of singularities of `T^{-1}`
+
+        OUTPUT:
+
+        list -- real numbers that are singular for `T^{-1}`
+
+
+        EXAMPLES::
+
+            sage: import surface_dynamics.interval_exchanges.multiple_permutation as mp
+            sage: import surface_dynamics.interval_exchanges.met as met
+
+            sage: perm = mp.MultiplePermutation([[['a', 'b', 'c'], ['d', 'b', 'c']], [['d', 'e', 'f'], ['a', 'e', 'f']]])
+            
+            sage: p = met.MultipleExchangeTransformation(perm, [1, 2, 3, 1, 5, 6], [[0, 1/2], [1/4, 1/3]])
+            sage: p.range_singularities()
+            [[1/2, 3/2, 7/2], [1/3, 4/3, 19/3]]
+        """
+        sing = []
+        lengths = self.lengths()
+        for k in range(self._permutation.number_of_components()):
+            l = [self._rotation[k][1]]
+            for j in self._permutation._labels[k][1]:
+                l.append(l[-1] + lengths[j])
+            del(l[-1])
+            sing.append(l)
+        return sing
+
+
+#   à partir d'ici copié collé sans modif   
 
     def translations(self):
         r"""
@@ -1049,7 +1186,7 @@ class CircleExchangeTransformation: #(AbstractExchangeTransformation)
 
     def __mul__(self, other):
         r"""
-        Composition of cet.
+        Composition of iet.
 
         The domain (i.e. the length) of the two iets must be the same. The
         alphabet chosen depends on the permutation.
@@ -1614,50 +1751,6 @@ class CircleExchangeTransformation: #(AbstractExchangeTransformation)
 # Attention, on a supprimé la dernière singularité (une singularité de moins que pour les intervalles), qui correspond à la première !
         return [self.domain_singularities(), self.range_singularities()]
 
-    def domain_singularities(self):
-        r"""
-        Returns the list of singularities of T
-
-        OUTPUT:
-
-        list -- positive reals that corresponds to singularities in the top
-            interval
-
-        EXAMPLES::
-
-            sage: from surface_dynamics import *
-
-            sage: t = iet.CET(("a b","b a"), [1, sqrt(2)], [1/2, 0])
-            sage: t.domain_singularities()
-            [1/2, 3/2]
-        """
-        l = [self._rotation[0]]
-        for j in self._permutation._labels[0]:
-            l.append(l[-1] + self._lengths[j])
-        del(l[-1])
-        return l
-
-    def range_singularities(self):
-        r"""
-        Returns the list of singularities of `T^{-1}`
-
-        OUTPUT:
-
-        list -- real numbers that are singular for `T^{-1}`
-
-
-        EXAMPLES::
-
-            sage: from surface_dynamics import *
-            sage: t = iet.CET(("a b","b a"), [1, sqrt(2)], [0.4, 1/2])
-            sage: t.range_singularities()
-            [1/2, sqrt(2) + 1/2]
-        """
-        l = [self._rotation[1]]
-        for j in self._permutation._labels[1]:
-            l.append(l[-1] + self._lengths[j])
-        del(l[-1])        
-        return l
 
     def __call__(self, value):
         r"""

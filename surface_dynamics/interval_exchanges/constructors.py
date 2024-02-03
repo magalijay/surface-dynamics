@@ -865,7 +865,7 @@ def CircleExchangeTransformation(permutation=None, lengths=None, rotation=None):
 
     - ``lengths`` - a list or a dictionary of lengths
 
-    - ``rotation`` - a real number
+    - ``rotation`` - a list of two real numbers
 
     OUTPUT:
 
@@ -944,6 +944,9 @@ def CircleExchangeTransformation(permutation=None, lengths=None, rotation=None):
 
 
 CET = CircleExchangeTransformation
+
+#TODO
+#MET = MultipleExchangeTransformation
 
 def IntervalExchangeTransformationFamily(*args):
     r"""

@@ -8,7 +8,7 @@ study of strata. This kind of permutation was introduced by Yoccoz [Yoc06]_
 (see also [MarMouYoc05]_).
 
 In fact, there is a geometric counterpart of labelled permutations. They
-correspond to translation surface with marked outgoing separatrices (i.e. we fi
+correspond to translation surface with marked outgoing separatrices (i.e. we fix
 a label for each of them).
 
 Remarks that Rauzy diagram of reduced objects are significantly smaller than
